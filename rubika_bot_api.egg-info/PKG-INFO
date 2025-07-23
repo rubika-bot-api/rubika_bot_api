@@ -1,0 +1,737 @@
+Metadata-Version: 2.4
+Name: rubika-bot-api
+Version: 1.0.2
+Summary: A powerful asynchronous/synchronous library for Rubika Bot API with a focus on high performance.
+Author-email: rubika api bot <0x01101101@proton.me>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/rubika-bot-api/rubika_bot_api
+Project-URL: Bug Tracker, https://github.com/rubika-bot-api/rubika_bot_api/issues
+Project-URL: Documentation, https://github.com/rubika-bot-api/rubika_bot_api/blob/main/README.md
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Communications :: Chat
+Classifier: Topic :: Internet
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Framework :: AsyncIO
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENCE
+Requires-Dist: aiohttp
+Requires-Dist: aiofiles
+Requires-Dist: requests
+Requires-Dist: pytz
+Dynamic: license-file
+
+# 🤖 Rubika Bot API Library 🚀
+
+A powerful asynchronous/synchronous library for Rubika Bot API with a focus on high performance.
+
+## ✨ About
+
+`rubika-bot-api` is a comprehensive Python library designed to simplify interaction with the Rubika messaging platform's Bot API. It seamlessly supports both asynchronous (`async/await`) and synchronous (`requests`) operations, offering unparalleled versatility for diverse project requirements. Engineered for speed and reliability, it's the perfect foundation for building high-performance, robust, and extensible bots.
+
+## 🌟 Key Features
+
+-   **Dual Mode Support**: Effortlessly switch between non-blocking asynchronous (`async/await`) and traditional blocking synchronous API calls.
+-   **Blazing Fast Performance**: Optimized for concurrent message processing, crucial for bots handling high volumes of messages across multiple groups.
+-   **Persistent Offset Handling**: Ensures message continuity, preventing data loss and redundant processing even after bot restarts.
+-   **Dynamic Keyboard Management**: Create sophisticated inline keyboards and reply keyboards for rich user interaction.
+-   **Robust Anti-Spam System**: Safeguard your bot from message floods with configurable thresholds and persistent user blocking.
+-   **Extensive API Coverage**: Full support for sending various message types (text, photos, videos, documents, stickers) and comprehensive keypad management.
+-   **Modular & Clean Architecture**: Designed with a focus on modularity, ensuring easy extensibility and maintainability for your custom bot logic.
+
+
+## ⬇️ Installation
+
+You can install `rubika-bot-api` using pip:
+
+```bash
+pip install rubika-bot-api
+```
+
+## ⚡ Quick Start & Usage Examples
+#### Let's dive into how you can use rubika-bot-api to build your bot.
+
+- ⚙️ Synchronous Bot Example
+
+    - For simpler tasks or environments where asynchronous programming is not a strict requirement, you can use the synchronous methods.
+```python
+import time
+from rubika_bot_api.api import Robot # Ensure rubika_bot_api is installed or in PYTHONPATH
+from rubika_bot_api.filters import text, command # Assuming you have filters module
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" # Replace with your actual token
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Message Handler ---
+@bot.on_message(filters=text & command("hello_sync"))
+def hello_sync_handler(robot, message):
+    """Responds to /hello_sync command synchronously."""
+    print(f"Received sync message: {message.text} from {message.sender_id}")
+    response_text = "Hello from your synchronous Rubika bot!"
+    
+    # Using synchronous send_message_sync
+    robot.send_message_sync(
+        chat_id=message.chat_id,
+        text=response_text
+    )
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    print("Running synchronous Rubika bot (polling)...")
+    # In synchronous mode, the bot.run() method handles the polling loop.
+    # It will process updates one by one.
+    bot.run()
+```
+---
+- 🚀 Asynchronous Bot Example
+    - For high-performance, responsive bots capable of handling many users and long-running tasks concurrently (like AI responses), the asynchronous mode is highly recommended. This example shows an AI bot with inline keyboard interaction.
+
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api.filters import text
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" # Replace with your actual token
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Message Handler (Async function using Sync API call) ---
+@bot.on_message(filters=text)
+async def handle_sync_api_call(bot, message):
+    """
+    Handles text messages. 
+    Demonstrates making a SYNCHRONOUS API call within an ASYNCHRONOUS handler.
+    """
+    print(f"Received message: '{message.text}' from {message.sender_id}")
+    
+    # Example: Send a message SYNCHRONOUSLY
+    # Note: This will block the current task until the request completes.
+    sync_response = bot.send_message_sync(
+        chat_id=message.chat_id,
+        text=f"Sync API says: You typed '{message.text}'"
+    )
+    print(f"Sync API call result: {sync_response}")
+
+    # You can also get bot info synchronously
+    me_info = bot.get_me_sync()
+    print(f"My sync bot ID: {me_info.get('data', {}).get('bot_id')}")
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    print("Starting Rubika bot with synchronous API call example...")
+    # The bot's main loop is still asynchronous.
+    asyncio.run(bot.run())
+```
+---
+- 🚀 Asynchronous Bot Example
+    - For high-performance, responsive bots capable of handling many users and long-running tasks concurrently, the asynchronous mode is highly recommended. This example shows a basic asynchronous bot echoing messages and responding to a start command.
+
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.keyboards import ChatKeyboardBuilder
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" # Replace with your actual token
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Bot Start Handler ---
+@bot.on_started_bot()
+async def on_bot_start(bot, chat_id):
+    """Sends a welcome message when a user starts the bot."""
+    await bot.send_message(chat_id, "Hello! Welcome to the bot. Send me a message.")
+
+# --- Main Message Handler ---
+@bot.on_message(filters=filters.pv) # Only process messages in private chats
+async def on_new_message(bot, message_context):
+    """Responds to text messages or handles the '/start' command (typed or button click)."""
+    
+    # Handle the '/start' command (typed text)
+    if message_context.text == "/start":
+        start_keyboard = ChatKeyboardBuilder(resize=True, on_time=False).row("Start Bot").build()
+        await message_context.reply(
+            "Welcome! I am your Rubika bot. Send me any text.",
+            chat_keypad=start_keyboard,
+            chat_keypad_type="New"
+        )
+        return
+
+    # Handle 'Start Bot' button click (from reply keyboard)
+    if message_context.aux_data and message_context.aux_data.button_id == "Start Bot":
+        await message_context.reply("Bot is ready. Please send your message.")
+        return
+
+    # Echo any other text message
+    if filters.text(message_context):
+        response_text = f"You said (async): '{message_context.text}'"
+        await message_context.reply(response_text)
+    
+    # Handle other message types if needed (e.g., photos, videos)
+    elif filters.photo(message_context):
+        await message_context.reply("I received a photo!")
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    print("Starting asynchronous Rubika bot...")
+    asyncio.run(bot.run())
+```
+---
+### 🛡️ Simple Anti-Spam Example
+
+Integrate the built-in anti-spam manager to protect your bot from message floods.
+
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.antispam import AntiSpamManager
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" 
+bot = Robot(token=RUBIKA_TOKEN)
+spam_manager = AntiSpamManager(spam_threshold=3, time_window=10, punishment_duration=60) # 3 messages in 10s -> 60s block
+
+# --- Message Handler ---
+@bot.on_message(filters=filters.pv) # Process private messages only
+async def anti_spam_check_handler(bot_instance, message_context):
+    user_id = message_context.sender_id
+    
+    # Check if user is currently punished (from previous spamming)
+    if spam_manager.is_punished(user_id):
+        print(f"Anti-spam: User {user_id} is still punished. Ignoring.")
+        return # Ignore message from punished users
+    
+    # Check if this message triggers a new punishment
+    if spam_manager.check_and_punish(user_id):
+        await message_context.reply("🚫 **اسپم شناسایی شد!** شما موقتاً به مدت 1 دقیقه مسدود شدید.")
+        print(f"Anti-spam: User {user_id} triggered spam, now punished.")
+        return # Block further processing for this message
+
+    # If not spammed, process the message normally
+    if filters.text(message_context):
+        await message_context.reply(f"پیام شما: '{message_context.text}' (ضد اسپم فعال)")
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    print("Running anti-spam example bot...")
+    asyncio.run(bot.run())
+```
+---
+
+### ⌨️ Simple Inline Keyboard (Glass Button) Example
+
+##### Learn to create inline keyboards and handle button clicks in your bot's messages.
+
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.keyboards import InlineKeyboardBuilder # Required for inline keyboards
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" 
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Keyboard Builder ---
+def create_action_keyboard(message_id_for_button: str) -> dict:
+    """Builds an inline keyboard with a simple action button."""
+    
+    # Define a single glass button
+    action_button = InlineKeyboardBuilder.button(
+        text="👇 روی من کلیک کن! 👇",
+        button_id=f"my_unique_action_{message_id_for_button}" # Unique ID for this button
+    )
+    
+    # Build the keyboard with one row
+    keyboard = InlineKeyboardBuilder().row(action_button).build()
+    return keyboard
+
+# --- Message Handler ---
+@bot.on_message(filters=filters.pv & filters.text) # Process private text messages
+async def inline_keyboard_example_handler(bot_instance, message_context):
+    # Check if this is a button click first
+    if message_context.aux_data and message_context.aux_data.button_id:
+        button_id = message_context.aux_data.button_id
+        
+        if button_id.startswith("my_unique_action_"):
+            # Acknowledge the click by editing the message
+            await bot_instance.edit_message_text(
+                chat_id=message_context.chat_id,
+                message_id=message_context.message_id,
+                text="✅ دکمه کلیک شد! عملیات انجام شد."
+            )
+            return
+        
+        # Add a fallback for unhandled buttons (important for robustness)
+        await message_context.reply(f"⁉️ دکمه ناشناخته کلیک شد: {button_id}")
+        return
+
+    # If it's not a button click, send a new message with the keyboard
+    example_keyboard = create_action_keyboard(message_context.message_id) # Use message ID for unique button
+    await message_context.reply(
+        text="این یک پیام با کیبورد اینلاین است. روی دکمه کلیک کنید:",
+        inline_keypad=example_keyboard
+    )
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    print("Running inline keyboard example bot...")
+    asyncio.run(bot.run())
+```
+---
+
+### 🔍 Simple Debugging Bot Example
+
+A minimalist bot that prints all received message details and raw data to the console for quick debugging.
+
+```python
+import asyncio
+import json # Required for pretty-printing raw data
+from rubika_bot_api.api import Robot # Main bot library import
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" # Replace with your actual token
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Message Handler ---
+@bot.on_message() # This handler receives ALL NewMessage updates (no filters applied here)
+async def debug_message_printer(bot_instance, message_context):
+    print("\n" + "="*50)
+    print(">>> RECEIVED MESSAGE FOR DEBUGGING <<<")
+    print("="*50)
+    
+    # Print key message attributes
+    print(f"  Message ID: {message_context.message_id}")
+    print(f"  Chat ID: {message_context.chat_id}")
+    print(f"  Sender ID: {message_context.sender_id}")
+    print(f"  Message Text: {message_context.text}")
+    print(f"  Chat Type: {message_context.chat_type}")
+    print(f"  Is Edited: {message_context.is_edited}")
+    
+    # Print presence of common objects (aux_data, file, etc.)
+    print(f"  Has Aux Data (Button Click Info): {'Yes' if message_context.aux_data else 'No'}")
+    print(f"  Has File Data: {'Yes' if message_context.file else 'No'}")
+    print(f"  Has Sticker Data: {'Yes' if message_context.sticker else 'No'}")
+
+    print("\n--- RAW DATA (Full JSON from Rubika API) ---")
+    # Pretty print the full raw data received from Rubika API
+    print(json.dumps(message_context.raw_data, indent=2, ensure_ascii=False))
+    print("="*50 + "\n")
+
+    # Send a simple reply to confirm message receipt
+    await message_context.reply("✅ جزئیات پیام شما در کنسول پرینت شد!")
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    print("Starting Rubika Debugging Bot...")
+    # This runs the bot's asynchronous event loop
+    asyncio.run(bot.run())
+```
+---
+### 🚀 Basic Bot Example 
+
+This concise example demonstrates message handling, basic filtering, logging, and sending inline keyboards (glass buttons).
+
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.keyboards import InlineKeyboardBuilder
+from rubika_bot_api.logger import logger, debugging
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" 
+debugging(True) # Enable logging for this example
+
+# --- Bot Initialization ---
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Message Handler ---
+@bot.on_message(filters=filters.pv & filters.text) # Only private text messages
+async def handle_message_and_button(bot_instance, message_context):
+    logger.info(f"Received text from PV: '{message_context.text}'")
+
+    # Handle a specific command or simple text
+    if message_context.text == "/greet":
+        # Create a simple inline (glass) button
+        my_button = InlineKeyboardBuilder.button(
+            text="👋 سلام کن",
+            button_id="greet_button_clicked"
+        )
+        keyboard = InlineKeyboardBuilder().row(my_button).build()
+        
+        await message_context.reply(
+            "لطفا روی دکمه زیر کلیک کنید:",
+            inline_keypad=keyboard
+        )
+        logger.info("Sent message with inline button.")
+        return
+    
+    # Handle the inline button click
+    if message_context.aux_data and message_context.aux_data.button_id == "greet_button_clicked":
+        await bot_instance.edit_message_text(
+            chat_id=message_context.chat_id,
+            message_id=message_context.message_id,
+            text="✅ سلام ربات! دکمه کلیک شد."
+        )
+        logger.info("Handled inline button click: 'greet_button_clicked'")
+        return
+
+    # Default echo for other text messages
+    response_text = f"شما گفتید: '{message_context.text}'"
+    await message_context.reply(response_text)
+    logger.info(f"Echoed message: '{response_text}'")
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    logger.info("Starting a concise Rubika bot example...")
+    asyncio.run(bot.run())
+
+```
+
+---
+
+```python
+### ⌨️ Simple Reply Keyboard Example
+
+Learn how to create and display a basic Reply Keyboard (Chat Keyboard) at the bottom of the chat screen, similar to the default `/start` button.
+
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.keyboards import ChatKeyboardBuilder # Required for Reply Keyboards
+from rubika_bot_api.logger import logger, debugging
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" 
+debugging(True) # Enable logging for this example
+
+# --- Bot Initialization ---
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Keyboard Builder ---
+def create_simple_reply_keyboard() -> dict:
+    """Creates a simple Reply Keyboard with a few buttons."""
+    return ChatKeyboardBuilder(resize=True, on_time=False) \
+           .row("گزینه ۱", "گزینه ۲") \
+           .row("بستن کیبورد") \
+           .build()
+
+# --- Message Handler ---
+@bot.on_message(filters=filters.pv & filters.text) # Process private text messages
+async def handle_reply_keyboard(bot_instance, message_context):
+    logger.info(f"Received text from PV: '{message_context.text}'")
+
+    # Command to show the keyboard
+    if message_context.text == "/show_keyboard":
+        reply_keyboard = create_simple_reply_keyboard()
+        await message_context.reply(
+            "لطفا از کیبورد پایین استفاده کنید:",
+            chat_keypad=reply_keyboard,
+            chat_keypad_type="New" # "New" shows the keyboard
+        )
+        logger.info("Sent message with Reply Keyboard.")
+        return
+    
+    # Command to hide the keyboard
+    elif message_context.text == "/hide_keyboard":
+        await message_context.reply(
+            "کیبورد پنهان شد.",
+            chat_keypad_type="Removed" # "Removed" hides the keyboard
+        )
+        logger.info("Hidden Reply Keyboard.")
+        return
+
+    # Handle clicks on the reply keyboard buttons
+    # Note: Reply keyboard button clicks send the button's text as a normal message.
+    # So, we check message.text directly.
+    elif message_context.text == "گزینه ۱":
+        await message_context.reply("شما گزینه ۱ را انتخاب کردید.")
+        logger.info("Handled 'گزینه ۱' click.")
+        return
+    
+    elif message_context.text == "گزینه ۲":
+        await message_context.reply("شما گزینه ۲ را انتخاب کردید.")
+        logger.info("Handled 'گزینه ۲' click.")
+        return
+
+    elif message_context.text == "بستن کیبورد":
+        await message_context.reply(
+            "کیبورد بسته شد.",
+            chat_keypad_type="Removed"
+        )
+        logger.info("Handled 'بستن کیبورد' click and removed keyboard.")
+        return
+
+    # Default echo for other text messages
+    response_text = f"شما گفتید: '{message_context.text}'"
+    await message_context.reply(response_text)
+    logger.info(f"Echoed message: '{response_text}'")
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    logger.info("Starting Reply Keyboard example bot...")
+    asyncio.run(bot.run())
+```
+---
+### 🚀 Advanced Features Example
+
+This example demonstrates the integration of advanced inline keyboard types (like textbox, selection, and calendar) and their respective `on_callback` handling.
+
+**`advanced_features_bot_example.py`**
+```python
+import asyncio
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.keyboards import InlineKeyboardBuilder # Now with advanced button methods
+from rubika_bot_api.logger import logger, debugging
+
+# --- Configuration ---
+RUBIKA_TOKEN = "YOUR_RUBIKA_BOT_TOKEN" 
+debugging(True) # Enable logging for this example
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Message Handler ---
+@bot.on_message(filters=filters.pv & filters.text) # Only private text messages
+async def handle_advanced_keyboard_demo(robot_client, received_message):
+    logger.info(f"Received text from PV: '{received_message.text}' from {received_message.sender_id}")
+
+    if received_message.text == "/advanced_keyboard":
+        # Example items for selection button
+        selection_items = [
+            {"text": "گزینه اول", "image_url": ""}, # image_url is optional
+            {"text": "گزینه دوم"},
+            {"text": "گزینه سوم"}
+        ]
+
+        # Build an inline keyboard with various advanced button types
+        advanced_keyboard = InlineKeyboardBuilder() \
+            .row(InlineKeyboardBuilder.button_textbox(text="📝 نام خود را وارد کنید", button_id="demo_textbox", title="ورود نام", place_holder="نام شما...")) \
+            .row(InlineKeyboardBuilder.button_selection(text="📊 انتخاب از لیست", button_id="demo_selection", selection_id="my_demo_list", items=selection_items, title="یکی را انتخاب کنید")) \
+            .row(InlineKeyboardBuilder.button_calendar(text="📅 تاریخ تولد", button_id="demo_calendar", calendar_type="DatePersian", title="انتخاب تاریخ")) \
+            .row(InlineKeyboardBuilder.button_number_picker(text="🔢 انتخاب سن", button_id="demo_number_picker", min_value="18", max_value="99", title="سنتان را انتخاب کنید")) \
+            .row(InlineKeyboardBuilder.button_string_picker(text="📝 رشته تحصیلی", button_id="demo_string_picker", items=["ریاضی", "تجربی", "انسانی"], title="رشته تحصیلی خود را انتخاب کنید")) \
+            .row(InlineKeyboardBuilder.button_location(text="📍 مکان من", button_id="demo_location_picker", title="اشتراک\u200cگذاری موقعیت مکانی")) \
+            .build()
+        
+        await received_message.reply(
+            "لطفاً یکی از دکمه‌های پیشرفته زیر را امتحان کنید:",
+            inline_keypad=advanced_keyboard
+        )
+        logger.info("Sent advanced keyboard demo.")
+        return
+
+    # Default echo for other text messages
+    response_content = f"شما گفتید: '{received_message.text}'"
+    await received_message.reply(response_content)
+    logger.info(f"Echoed message: '{response_content}'")
+
+# --- Callbacks for Advanced Buttons ---
+@bot.on_callback("demo_textbox")
+async def handle_demo_textbox(robot_client, message_context):
+    user_input = message_context.aux_data.start_id # For textbox, submitted text is typically in aux_data.start_id
+    user_name = await robot_client.get_name(message_context.sender_id) or "کاربر"
+    await message_context.reply(f"✅ {user_name} عزیز، نام شما: {user_input} ثبت شد.")
+    logger.info(f"Handled textbox input from {user_name}: {user_input}")
+
+@bot.on_callback("demo_selection")
+async def handle_demo_selection(robot_client, message_context):
+    # For selection, raw_data.get('inline_message', {}).get('aux_data', {}).get('selected_items', []) usually holds the selection
+    selected_items_raw = message_context.raw_data.get('inline_message', {}).get('aux_data', {}).get('selected_items', [])
+    selected_texts = [item.get('text', 'N/A') for item in selected_items_raw]
+    
+    user_name = await robot_client.get_name(message_context.sender_id) or "کاربر"
+    await message_context.reply(f"✅ {user_name} عزیز، شما انتخاب کردید: {', '.join(selected_texts)}")
+    logger.info(f"Handled selection from {user_name}: {selected_texts}")
+
+@bot.on_callback("demo_calendar")
+async def handle_demo_calendar(robot_client, message_context):
+    selected_date = message_context.aux_data.start_id # Date is typically in aux_data.start_id
+    user_name = await robot_client.get_name(message_context.sender_id) or "کاربر"
+    await message_context.reply(f"✅ {user_name} عزیز، تاریخ انتخاب شده: {selected_date} ثبت شد.")
+    logger.info(f"Handled calendar date from {user_name}: {selected_date}")
+
+@bot.on_callback("demo_number_picker")
+async def handle_demo_number_picker(robot_client, message_context):
+    selected_number = message_context.aux_data.start_id # Number is typically in aux_data.start_id
+    user_name = await robot_client.get_name(message_context.sender_id) or "کاربر"
+    await message_context.reply(f"✅ {user_name} عزیز، عدد انتخاب شده: {selected_number} ثبت شد.")
+    logger.info(f"Handled number picker from {user_name}: {selected_number}")
+
+@bot.on_callback("demo_string_picker")
+async def handle_demo_string_picker(robot_client, message_context):
+    selected_string = message_context.aux_data.start_id # String is typically in aux_data.start_id
+    user_name = await robot_client.get_name(message_context.sender_id) or "کاربر"
+    await message_context.reply(f"✅ {user_name} عزیز، رشته انتخاب شده: {selected_string} ثبت شد.")
+    logger.info(f"Handled string picker from {user_name}: {selected_string}")
+
+@bot.on_callback("demo_location_picker")
+async def handle_demo_location_picker(robot_client, message_context):
+    # Location data comes in message.location object for location buttons
+    if message_context.location:
+        user_name = await robot_client.get_name(message_context.sender_id) or "کاربر"
+        await message_context.reply(f"✅ {user_name} عزیز، مکان شما: عرض جغرافیایی {message_context.location.latitude}, طول جغرافیایی {message_context.location.longitude}")
+        logger.info(f"Handled location from {user_name}: Lat={message_context.location.latitude}, Lon={message_context.location.longitude}")
+    else:
+        await message_context.reply("مکان شما دریافت نشد.")
+        logger.warning(f"Location callback received without location data from {message_context.sender_id}.")
+
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    logger.info("Starting advanced features demo bot...")
+    asyncio.run(bot.run())
+
+
+```
+
+--- 
+### ✨ another simple bot for info and ...
+```python
+import asyncio
+import random
+import datetime
+import pytz
+from rubika_bot_api.api import Robot
+from rubika_bot_api import filters
+from rubika_bot_api.keyboards import ChatKeyboardBuilder, InlineKeyboardBuilder
+from rubika_bot_api.logger import logger, debugging
+
+# --- Configuration ---
+RUBIKA_TOKEN = "TOKEN" 
+
+# debugging(True)
+
+bot = Robot(token=RUBIKA_TOKEN)
+
+# --- Interesting Data ---
+FUN_FACTS = [
+    "آیا می\u200cدانستید زنبورها برای تولید یک قاشق چای\u200cخوری عسل، باید بیش از ۲ میلیون گل را ملاقات کنند؟",
+    "آیا می\u200cدانستید تنها حیوانی که نمی\u200cتواند بپرد، فیل است؟",
+    "آیا می\u200cدانستید زبان آفتاب\u200cپرست دو برابر طول بدن اوست؟",
+    "آیا می\u200cدانستید اثر انگشت هر فرد، منحصر به فرد است و حتی دوقلوهای همسان هم اثر انگشت متفاوت دارند؟",
+    "آیا می\u200cدانستید قلب میگو در سرش قرار دارد؟"
+]
+
+# --- Bot Start Handler ---
+@bot.on_started_bot()
+async def on_bot_start(bot_instance, chat_id):
+    logger.info(f"Bot started by chat_id: {chat_id}")
+    main_keyboard = ChatKeyboardBuilder(resize=True, on_time=False).row("/fact", "/time").row("/myinfo", "/about").build()
+    await bot_instance.send_message(
+        chat_id=chat_id,
+        text="Hello! Welcome to the bot. Use the keyboard below for commands:",
+        chat_keypad=main_keyboard,
+        chat_keypad_type="New"
+    )
+
+# --- Bot Stop Handler ---
+@bot.on_stopped_bot()
+async def on_bot_stop(robot, chat_id):
+    logger.info(f"Bot stopped by chat_id: {chat_id}")
+    # In a real bot, you might perform cleanup here.
+
+# --- Main Message Handler (All logic unified here) ---
+@bot.on_message(filters=filters.pv & filters.text) # Only process private text messages
+async def handle_all_pv_text_messages(bot_instance, message_context):
+    logger.info(f"Received text from PV: '{message_context.text}' from {message_context.sender_id}")
+
+    # --- Check for specific commands first ---
+    if message_context.text == "/fact":
+        fact = random.choice(FUN_FACTS)
+        await message_context.reply(f"💡 حقیقت جالب: \n{fact}")
+        logger.info(f"Sent fun fact to {message_context.sender_id}")
+        return # Important: Return after handling a command
+
+    elif message_context.text == "/time":
+        try:
+            tehran_tz = pytz.timezone('Asia/Tehran')
+            now_tehran = datetime.datetime.now(tehran_tz)
+            time_str = now_tehran.strftime("%Y-%m-%d %H:%M:%S")
+            await message_context.reply(f"⏰ ساعت فعلی در تهران: {time_str}")
+        except Exception as e:
+            logger.error(f"Error getting time: {e}")
+            await message_context.reply("متاسفم، مشکلی در نمایش ساعت رخ داد.")
+        logger.info(f"Sent time to {message_context.sender_id}")
+        return # Important: Return after handling a command
+
+    elif message_context.text == "/myinfo":
+        user_id = message_context.sender_id
+        user_name = await bot_instance.get_name(user_id)
+        user_username = await bot_instance.get_username(user_id)
+        
+        info_text = f"👤 اطلاعات شما:\n" \
+                    f"نام: {user_name or 'نامی یافت نشد'}\n" \
+                    f"یوزرنیم: @{user_username or 'یافت نشد'}\n" \
+                    f"شناسه کاربری: `{user_id}`"
+        await message_context.reply(info_text)
+        logger.info(f"Sent user info to {message_context.sender_id}")
+        return # Important: Return after handling a command
+
+    elif message_context.text == "/about":
+        await message_context.reply("من یک ربات نمونه هستم که با استفاده از کتابخانه Rubika Bot API ساخته شده‌ام.")
+        logger.info(f"Sent about info to {message_context.sender_id}")
+        return # Important: Return after handling a command
+
+    # --- Handle reply keyboard buttons (text matches) ---
+    elif message_context.text == "بات جدید":
+        # Create an inline button to confirm
+        inline_btn = InlineKeyboardBuilder.button(
+            text="✅ تایید ساخت بات",
+            button_id="confirm_new_bot"
+        )
+        inline_keyboard = InlineKeyboardBuilder().row(inline_btn).build()
+        await message_context.reply(
+            "آیا از ساخت بات جدید اطمینان دارید؟",
+            inline_keypad=inline_keyboard
+        )
+        return
+
+    elif message_context.text == "لیست بات‌ها":
+        await message_context.reply(f"{user_name or 'کاربر'} عزیز، هنوز باتی برای شما ثبت نشده است.")
+        return
+    
+    elif message_context.text == "بستن کیبورد":
+        await message_context.reply(
+            "کیبورد بسته شد.",
+            chat_keypad_type="Removed" # "Removed" hides the keyboard
+        )
+        logger.info("Hidden Reply Keyboard.")
+        return
+
+    # --- Handle inline button clicks (aux_data) ---
+    if message_context.aux_data and message_context.aux_data.button_id:
+        button_id = message_context.aux_data.button_id
+        
+        if button_id == "confirm_new_bot":
+            user_name = await bot_instance.get_name(message_context.sender_id) or "کاربر"
+            await message_context.reply(f"✅ {user_name} عزیز، درخواست ساخت بات شما ثبت شد!")
+            logger.info(f"Handled inline button click: 'confirm_new_bot' by {user_name}.")
+            return
+
+        # Add other inline button handlers here if needed (e.g., from AI feature)
+        # elif button_id.startswith("reprocess_text:"): ...
+        # elif button_id.startswith("say_hello"): ...
+
+        # Fallback for unhandled inline buttons
+        else:
+            await message_context.reply(f"⁉️ دکمه ناشناخته کلیک شد: {button_id}")
+            logger.info(f"Unhandled inline button click: {button_id}")
+            return
+    
+    # --- Default echo for general text messages if no command or button matched ---
+    response_content = f"شما گفتید: '{message_context.text}'\nبرای دیدن قابلیت‌ها، دستورات زیر را امتحان کنید:\n/fact, /time, /myinfo, /about"
+    await message_context.reply(response_content)
+    logger.info(f"Echoed general message: '{response_content}'")
+
+
+# --- Run the Bot ---
+if __name__ == "__main__":
+    logger.info("Starting asynchronous Rubika bot example with unified handlers...")
+    asyncio.run(bot.run())
+```
