@@ -1,3 +1,28 @@
+Metadata-Version: 2.4
+Name: rubika-bot-api
+Version: 1.0.2
+Summary: A powerful asynchronous/synchronous library for Rubika Bot API with a focus on high performance.
+Author-email: rubika api bot <0x01101101@proton.me>
+License-Expression: MIT
+Project-URL: Homepage, https://github.com/rubika-bot-api/rubika_bot_api
+Project-URL: Bug Tracker, https://github.com/rubika-bot-api/rubika_bot_api/issues
+Project-URL: Documentation, https://github.com/rubika-bot-api/rubika_bot_api/blob/main/README.md
+Classifier: Programming Language :: Python :: 3
+Classifier: Operating System :: OS Independent
+Classifier: Topic :: Software Development :: Libraries :: Python Modules
+Classifier: Topic :: Communications :: Chat
+Classifier: Topic :: Internet
+Classifier: Topic :: Software Development :: Libraries
+Classifier: Framework :: AsyncIO
+Requires-Python: >=3.7
+Description-Content-Type: text/markdown
+License-File: LICENCE
+Requires-Dist: aiohttp
+Requires-Dist: aiofiles
+Requires-Dist: requests
+Requires-Dist: pytz
+Dynamic: license-file
+
 # 🤖 Rubika Bot API Library 🚀
 
 A powerful asynchronous/synchronous library for Rubika Bot API with a focus on high performance.
